@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BAZAR TKJ 3</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      min-height: 100vh;
+      background-color: #fffbea;
+      background-image: radial-gradient(#e7f9d9 1px, transparent 1px),
+                        radial-gradient(#fff3d9 1px, transparent 1px);
+      background-size: 40px 40px;
+      color: #2b2b2b;
+      padding: 1.5rem;
+      overflow-x: hidden;
+    }
+
+    /* Dekorasi daun & bunga */
+    .decor {
+      position: absolute;
+      z-index: 0;
+      opacity: 0.3;
+      pointer-events: none;
+      animation: gentleMove 12s ease-in-out infinite alternate;
+    }
+    .decor-leaf {
+      filter: hue-rotate(30deg);
+    }
+    @keyframes gentleMove {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(10px) rotate(3deg); }
+    }
+
+    .card {
+      backdrop-filter: blur(10px);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(200, 200, 200, 0.3);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      border-radius: 1rem;
+      transition: all 0.3s ease;
+      z-index: 1;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #4CAF50, #16a34a);
+      color: white;
+      font-weight: 600;
+      transition: 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: scale(1.05);
+      background: linear-gradient(135deg, #15803d, #22c55e);
+    }
+
+    header h1 {
+      color: #3d550c;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    #qrSection { animation: fadeIn 0.5s ease forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Dekorasi daun & bunga -->
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616408.png" class="decor" style="top: 30px; left: 40px; width: 80px;">
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616490.png" class="decor decor-leaf" style="bottom: 40px; right: 30px; width: 100px;">
+  <img src="https://cdn-icons-png.flaticon.com/512/3541/3541830.png" class="decor" style="top: 100px; right: 60px; width: 60px; animation-delay: 2s;">
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616557.png" class="decor" style="bottom: 120px; left: 80px; width: 90px; animation-delay: 4s;">
+
+  <div class="max-w-4xl mx-auto relative z-10">
+    <header class="text-center mb-10">
+      <h1 class="text-3xl md:text-4xl">🌿 DAFTAR MENU XI TKJ 3 🌿</h1>
+      <p class="text-gray-600 mt-2">Pesanan otomatis dikirim ke WhatsApp Admin 💬</p>
+    </header>
+
+    <main class="flex flex-col gap-6">
+      <section id="productList" class="flex flex-col gap-6"></section>
+
+      <aside class="card p-5 mt-6">
+        <h2 class="font-semibold text-lg mb-3 text-gray-700">🛒 Keranjang Belanja</h2>
+        <div id="cartList" class="text-sm text-gray-500">Keranjang kosong</div>
+
+        <div class="mt-4">
+          <label class="block text-sm text-gray-600">Nama</label>
+          <input id="customerName" class="w-full rounded p-2 mt-1" placeholder="Nama kamu..." />
+
+          <label class="block text-sm text-gray-600 mt-2">Kelas</label>
+          <textarea id="customerAddress" class="w-full rounded p-2 mt-1" placeholder="Kelas & Jurusan..."></textarea>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          <a id="waButton" class="block text-center w-full py-2 rounded-lg font-semibold bg-gray-300 text-gray-600 cursor-not-allowed" href="#" target="_blank">Kirim Pesanan ke WhatsApp Admin</a>
+
+          <button onclick="cancelOrder()" class="block text-center w-full py-2 rounded-lg font-semibold bg-red-500 hover:bg-red-600 text-white transition">Batalkan Pesanan</button>
+
+          <div id="qrSection" class="hidden pt-3 border-t border-gray-200">
+            <div class="text-sm text-gray-700 mb-2">📱 Scan QR untuk membuka WA Admin:</div>
+            <div class="flex items-center gap-4">
+              <div class="bg-white p-3 rounded-lg shadow-sm">
+                <div id="qrcode"></div>
+              </div>
+              <div class="text-xs break-all text-gray-600">
+                <div class="font-semibold">Link WhatsApp:</div>
+                <div id="waLink"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    const ADMIN_PHONE = '6282146274330';
+    const GREETING = 'Halo Admin, ada pesanan baru:\n';
+
+    const products = [
+      {
+        id: 1,
+        name: 'Lumpia Ayam Suwir',
+        price: 6000,
+        desc: 'Lumpia renyah berisi ayam suwir gurih, dibalut kulit lembut dan disajikan hangat. Lezat banget untuk camilan sore!',
+        image: 'Lumpia Ayam Swirrr.jpg'
+      },
+      {
+        id: 2,
+        name: 'Wonton Chili Oil',
+        price: 6000,
+        desc: 'Wonton isi ayam yang lembut, disiram dengan chili oil pedas gurih khas oriental. Cocok buat pecinta pedas!',
+        image: 'wonton.jpg'
+      },
+      {
+        id: 3,
+        name: 'Es Kuwut',
+        price: 4000,
+        desc: 'Minuman segar perpaduan serutan mentimun, lemon, dan sirup manis yang menyegarkan tenggorokan.',
+        image: 'Ezzz Kuwut.jpg'
+      },
+    ];
+
+    let cart = [];
+
+    const productList = document.getElementById('productList');
+    const cartList = document.getElementById('cartList');
+    const waButton = document.getElementById('waButton');
+    const qrSection = document.getElementById('qrSection');
+    const qrCodeContainer = document.getElementById('qrcode');
+    const waLink = document.getElementById('waLink');
+
+    function renderProducts() {
+      productList.innerHTML = '';
+      products.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'card p-4 flex flex-col md:flex-row gap-4 items-center';
+        div.innerHTML = `
+          <img src="${p.image}" alt="${p.name}" class="w-48 h-40 object-cover rounded-lg shadow-sm">
+          <div class="flex-1">
+            <h3 class='font-semibold text-lg text-gray-800'>${p.name}</h3>
+            <p class='text-sm text-gray-600 mb-3'>${p.desc}</p>
+            <div class='flex items-center justify-between'>
+              <span class='font-semibold text-green-700'>Rp${p.price.toLocaleString()}</span>
+              <button class='btn px-3 py-1 rounded-lg text-sm'>Tambah</button>
+            </div>
+          </div>
+        `;
+        div.querySelector('button').onclick = () => addToCart(p);
+        productList.appendChild(div);
+      });
+    }
+
+    function addToCart(product) {
+      const found = cart.find(x => x.id === product.id);
+      if (found) found.qty++;
+      else cart.push({ ...product, qty: 1 });
+      renderCart();
+    }
+
+    function updateQty(id, qty) {
+      if (qty <= 0) cart = cart.filter(x => x.id !== id);
+      else cart = cart.map(x => x.id === id ? { ...x, qty } : x);
+      renderCart();
+    }
+
+    function renderCart() {
+      if (cart.length === 0) {
+        cartList.innerHTML = 'Keranjang kosong';
+        waButton.classList = 'block text-center w-full py-2 rounded-lg font-semibold bg-gray-300 text-gray-600 cursor-not-allowed';
+        qrSection.classList.add('hidden');
+        return;
+      }
+
+      let html = '';
+      let subtotal = 0;
+      cart.forEach(item => {
+        subtotal += item.price * item.qty;
+        html += `
+          <div class='flex items-center justify-between mb-2'>
+            <div>
+              <div class='font-medium text-gray-700'>${item.name}</div>
+              <div class='text-xs text-gray-500'>Rp${item.price.toLocaleString()}</div>
+            </div>
+            <input type='number' value='${item.qty}' min='0' class='w-16 rounded border p-1 text-center' onchange='updateQty(${item.id}, parseInt(this.value || 0))'>
+          </div>
+        `;
+      });
+      html += `<div class='pt-2 border-t mt-2 flex justify-between font-semibold text-gray-700'>Total: <span>Rp${subtotal.toLocaleString()}</span></div>`;
+      cartList.innerHTML = html;
+      updateWhatsAppLink();
+    }
+
+    function updateWhatsAppLink() {
+      const name = document.getElementById('customerName').value;
+      const address = document.getElementById('customerAddress').value;
+
+      let msg = GREETING;
+      let subtotal = 0;
+      cart.forEach((p, i) => {
+        subtotal += p.price * p.qty;
+        msg += `${i + 1}. ${p.name} x${p.qty} - Rp${p.price.toLocaleString()} (subtotal: Rp${(p.price * p.qty).toLocaleString()})\n`;
+      });
+      msg += `\nTotal: Rp${subtotal.toLocaleString()}`;
+      if (name) msg += `\nNama: ${name}`;
+      if (address) msg += `\nKelas: ${address}`;
+      msg += `\n\nTerima kasih 🙏`;
+
+      const waUrl = `https://api.whatsapp.com/send?phone=${ADMIN_PHONE}&text=${encodeURIComponent(msg)}`;
+      waButton.href = waUrl;
+      waButton.classList = 'block text-center w-full py-2 rounded-lg font-semibold btn';
+      qrSection.classList.remove('hidden');
+      qrCodeContainer.innerHTML = '';
+      new QRCode(qrCodeContainer, { text: waUrl, width: 140, height: 140 });
+      waLink.textContent = waUrl;
+    }
+
+    function cancelOrder() {
+      if (confirm("Yakin ingin membatalkan semua pesanan?")) {
+        cart = [];
+        renderCart();
+        qrSection.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('customerName').addEventListener('input', updateWhatsAppLink);
+    document.getElementById('customerAddress').addEventListener('input', updateWhatsAppLink);
+
+    renderProducts();
+  </script>
+</body>
+</html>
